@@ -91,7 +91,8 @@ OTHER_FILES += \
 # OpenCascade
 include(opencascade.pri)
 message(OpenCascade version $$OCC_VERSION_STR)
-LIBS += \
+
+LIBS += -L$$CSF_OCCTLibPath \
     -lTKBin \
     -lTKBinL \
     -lTKBinXCAF \
