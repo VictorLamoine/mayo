@@ -16,6 +16,7 @@ CONFIG(debug, debug|release) {
 QT += core gui widgets
 message(Qt version $$QT_VERSION)
 
+QMAKE_CXXFLAGS += -fdiagnostics-color
 CONFIG += c++17
 CONFIG += file_copies
 CONFIG(debug, debug|release) {

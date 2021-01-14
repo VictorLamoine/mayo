@@ -16,6 +16,14 @@ equals(QT_ARCH, i386) {
 }
 isEmpty(CASCADE_DEFINES):CASCADE_DEFINES = $$(CSF_DEFINES)
 
+
+message("---")
+message("CASCADE_INC_DIR =" $$CASCADE_INC_DIR)
+message("CASCADE_LIB_DIR =" $$CASCADE_LIB_DIR)
+message("CASCADE_BIN_DIR =" $$CASCADE_BIN_DIR)
+message("CASCADE_SRC_DIR =" $$CASCADE_SRC_DIR)
+message("---")
+
 INCLUDEPATH += $$CASCADE_INC_DIR
 
 linux-*:DEFINES += \
