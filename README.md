@@ -8,6 +8,11 @@
 # What is Mayo
 Mayo is a 3D viewer and converter inspired by FreeCad
 
+# CMake
+```bash
+clear && rm * -rf && cmake ../src/ -DCMAKE_PREFIX_PATH=/home/victor/software/opencascade-7.5.0/install/
+```
+
 # Overview
 * View and convert 3D files in different formats
 * Explore assembly trees and view properties
