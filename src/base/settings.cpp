@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (c) 2020, Fougue Ltd. <http://www.fougue.pro>
+** Copyright (c) 2021, Fougue Ltd. <http://www.fougue.pro>
 ** All rights reserved.
 ** See license at https://github.com/fougue/mayo/blob/master/LICENSE.txt
 ****************************************************************************/
@@ -118,6 +118,11 @@ void Settings::loadPropertyFrom(const QSettings& source, SettingIndex index)
         const QString sectionPath = d->sectionPath(index.section());
         Private::loadPropertyFrom(source, sectionPath, prop);
     }
+}
+
+QVariant Settings::findValueFromKey(const QString& strKey) const
+{
+    return d->m_settings.value(strKey);
 }
 
 void Settings::save()

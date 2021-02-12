@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (c) 2020, Fougue Ltd. <http://www.fougue.pro>
+** Copyright (c) 2021, Fougue Ltd. <http://www.fougue.pro>
 ** All rights reserved.
 ** See license at https://github.com/fougue/mayo/blob/master/LICENSE.txt
 ****************************************************************************/
@@ -28,6 +28,7 @@ public:
 
     const T& value() const;
     Result<void> setValue(const T& val);
+    operator const T&() const { return this->value(); }
 
     QVariant valueAsVariant() const override;
     Result<void> setValueFromVariant(const QVariant& variant) override;
@@ -122,6 +123,7 @@ private:
 using PropertyBool = GenericProperty<bool>;
 using PropertyInt = GenericScalarProperty<int>;
 using PropertyDouble = GenericScalarProperty<double>;
+using PropertyCheckState = GenericProperty<Qt::CheckState>;
 using PropertyQByteArray = GenericProperty<QByteArray>;
 using PropertyQString = GenericProperty<QString>;
 using PropertyQStringList = GenericProperty<QStringList>;

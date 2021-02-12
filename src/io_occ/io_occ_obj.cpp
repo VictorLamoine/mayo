@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (c) 2020, Fougue Ltd. <http://www.fougue.pro>
+** Copyright (c) 2021, Fougue Ltd. <http://www.fougue.pro>
 ** All rights reserved.
 ** See license at https://github.com/fougue/mayo/blob/master/LICENSE.txt
 ****************************************************************************/
@@ -11,11 +11,10 @@ namespace Mayo {
 namespace IO {
 
 class OccObjReader::Properties : public OccBaseMeshReaderProperties {
-    MAYO_DECLARE_TEXT_ID_FUNCTIONS(Mayo::IO::OccObjReader_Properties)
+    MAYO_DECLARE_TEXT_ID_FUNCTIONS(Mayo::IO::OccObjReader::Properties)
 public:
     Properties(PropertyGroup* parentGroup)
-        : OccBaseMeshReaderProperties(parentGroup),
-          singlePrecisionVertexCoords(this, textId("singlePrecisionVertexCoords"))
+        : OccBaseMeshReaderProperties(parentGroup)
     {
         this->singlePrecisionVertexCoords.setDescription(
                     textId("Single precision flag for reading vertex data(coordinates)").tr());
@@ -26,7 +25,7 @@ public:
         this->singlePrecisionVertexCoords.setValue(false);
     }
 
-    PropertyBool singlePrecisionVertexCoords;
+    PropertyBool singlePrecisionVertexCoords{ this, textId("singlePrecisionVertexCoords") };
 };
 
 OccObjReader::OccObjReader()
@@ -44,7 +43,7 @@ void OccObjReader::applyProperties(const PropertyGroup* params)
     OccBaseMeshReader::applyProperties(params);
     auto ptr = dynamic_cast<const Properties*>(params);
     if (ptr) {
-        m_params.singlePrecisionVertexCoords = ptr->singlePrecisionVertexCoords.value();
+        m_params.singlePrecisionVertexCoords = ptr->singlePrecisionVertexCoords;
     }
 }
 

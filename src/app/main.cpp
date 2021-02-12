@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (c) 2020, Fougue Ltd. <http://www.fougue.pro>
+** Copyright (c) 2021, Fougue Ltd. <http://www.fougue.pro>
 ** All rights reserved.
 ** See license at https://github.com/fougue/mayo/blob/master/LICENSE.txt
 ****************************************************************************/
@@ -8,9 +8,10 @@
 #include "../base/document_tree_node_properties_provider.h"
 #include "../base/io_system.h"
 #include "../base/settings.h"
+#include "../io_gmio/io_gmio.h"
 #include "../io_occ/io_occ.h"
 #include "../gui/gui_application.h"
-#include "../graphics/graphics_entity_driver.h"
+#include "../graphics/graphics_object_driver.h"
 #include "app_module.h"
 #include "document_tree_node_properties_providers.h"
 #include "mainwindow.h"
@@ -86,9 +87,20 @@ static int runApp(QApplication* qtApp)
     auto app = Application::instance().get();
     auto guiApp = new GuiApplication(app);
 
-    // Register IO OpenCascade objects
+    // Load translation files
+    {
+        const QString qmFilePath = AppModule::qmFilePath(AppModule::languageCode(app));
+        auto translator = new QTranslator(app);
+        if (translator->load(qmFilePath))
+            qtApp->installTranslator(translator);
+        else
+            std::cerr << qUtf8Printable(Main::tr("Failed to load translation for '%1'").arg(qmFilePath)) << std::endl;
+    }
+
+    // Register I/O objects
     app->ioSystem()->addFactoryReader(std::make_unique<IO::OccFactoryReader>());
     app->ioSystem()->addFactoryWriter(std::make_unique<IO::OccFactoryWriter>());
+    app->ioSystem()->addFactoryWriter(IO::GmioFactoryWriter::create());
     IO::addPredefinedFormatProbes(app->ioSystem());
 
     // Register Graphics/TreeNode mapping drivers
@@ -96,8 +108,8 @@ static int runApp(QApplication* qtApp)
                 std::make_unique<GraphicsShapeTreeNodeMappingDriver>());
 
     // Register Graphics entity drivers
-    guiApp->graphicsEntityDriverTable()->addDriver(std::make_unique<GraphicsMeshEntityDriver>());
-    guiApp->graphicsEntityDriverTable()->addDriver(std::make_unique<GraphicsShapeEntityDriver>());
+    guiApp->graphicsObjectDriverTable()->addDriver(std::make_unique<GraphicsShapeObjectDriver>());
+    guiApp->graphicsObjectDriverTable()->addDriver(std::make_unique<GraphicsMeshObjectDriver>());
 
     // Register AppModule
     auto appModule = new AppModule(app);
@@ -123,17 +135,6 @@ static int runApp(QApplication* qtApp)
         return -1;
     }
     mayoTheme()->setup();
-
-    // Load translation files before UI creation
-    {
-        app->settings()->loadProperty(app->settings()->findProperty(&appModule->language));
-        const QString qmFilePath = AppModule::qmFilePath(appModule->language.name());
-        auto translator = new QTranslator(app);
-        if (translator->load(qmFilePath))
-            qtApp->installTranslator(translator);
-        else
-            std::cerr << qUtf8Printable(Main::tr("Failed to load translation for '%1'").arg(qmFilePath)) << std::endl;
-    }
 
     // Create MainWindow
     app->settings()->loadProperty(app->settings()->findProperty(&appModule->recentFiles));

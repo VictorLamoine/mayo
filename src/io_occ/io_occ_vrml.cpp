@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (c) 2020, Fougue Ltd. <http://www.fougue.pro>
+** Copyright (c) 2021, Fougue Ltd. <http://www.fougue.pro>
 ** All rights reserved.
 ** See license at https://github.com/fougue/mayo/blob/master/LICENSE.txt
 ****************************************************************************/
@@ -23,12 +23,12 @@ namespace Mayo {
 namespace IO {
 
 class OccVrmlWriter::Properties : public PropertyGroup {
-    MAYO_DECLARE_TEXT_ID_FUNCTIONS(Mayo::IO::OccVrmlWriter_Properties)
+    MAYO_DECLARE_TEXT_ID_FUNCTIONS(Mayo::IO::OccVrmlWriter::Properties)
 public:
     Properties(PropertyGroup* parentGroup)
-        : PropertyGroup(parentGroup),
-          shapeRepresentation(this, textId("shapeRepresentation"), &enumShapeRepresentation)
+        : PropertyGroup(parentGroup)
     {
+        this->shapeRepresentation.mutableEnumeration().chopPrefix("VrmlAPI_");
     }
 
     void restoreDefaults() override {
@@ -36,16 +36,10 @@ public:
         this->shapeRepresentation.setValue(params.shapeRepresentation);
     }
 
-    static inline const Enumeration enumShapeRepresentation = {
-        { VrmlAPI_ShadedRepresentation, textId("RepresentationShaded"), {} },
-        { VrmlAPI_WireFrameRepresentation, textId("RepresentationWireframe"), {} },
-        { VrmlAPI_BothRepresentation, textId("RepresentationBoth"), {} },
-    };
-
 //    PropertyBool m_meshDeflectionFromShapeRelativeSize;
 //    PropertyDouble m_meshDeflection;
 //    PropertyDouble scale;
-    PropertyEnumeration shapeRepresentation;
+    PropertyEnum<VrmlAPI_RepresentationOfShape> shapeRepresentation{ this, textId("shapeRepresentation") };
 };
 
 bool OccVrmlWriter::transfer(Span<const ApplicationItem> spanAppItem, TaskProgress* progress)
@@ -102,7 +96,7 @@ void OccVrmlWriter::applyProperties(const PropertyGroup* params)
 {
     auto ptr = dynamic_cast<const Properties*>(params);
     if (ptr) {
-        m_params.shapeRepresentation = ptr->shapeRepresentation.valueAs<VrmlAPI_RepresentationOfShape>();
+        m_params.shapeRepresentation = static_cast<VrmlAPI_RepresentationOfShape>(ptr->shapeRepresentation);
     }
 }
 

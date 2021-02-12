@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (c) 2020, Fougue Ltd. <http://www.fougue.pro>
+** Copyright (c) 2021, Fougue Ltd. <http://www.fougue.pro>
 ** All rights reserved.
 ** See license at https://github.com/fougue/mayo/blob/master/LICENSE.txt
 ****************************************************************************/
@@ -19,6 +19,8 @@ public:
 
     Span<const ApplicationItem> selectedItems() const;
 
+    bool isSelected(const ApplicationItem& item);
+
     void add(const ApplicationItem& item);
     void add(Span<ApplicationItem> vecItem);
     void remove(const ApplicationItem& item);
@@ -29,7 +31,6 @@ public:
     void clear();
 
 signals:
-    void cleared();
     void changed(Span<ApplicationItem> selected, Span<ApplicationItem> deselected);
 
 private:

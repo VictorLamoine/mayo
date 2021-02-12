@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (c) 2020, Fougue Ltd. <http://www.fougue.pro>
+** Copyright (c) 2021, Fougue Ltd. <http://www.fougue.pro>
 ** All rights reserved.
 ** See license at https://github.com/fougue/mayo/blob/master/LICENSE.txt
 ****************************************************************************/
@@ -37,11 +37,13 @@
 #include <QtCore/QVariant>
 #include <QtTest/QSignalSpy>
 #include <gsl/gsl_util>
+#include <algorithm>
 #include <cmath>
 #include <cstring>
-#include <utility>
 #include <iostream>
 #include <sstream>
+#include <utility>
+#include <vector>
 
 Q_DECLARE_METATYPE(Mayo::UnitSystem::TranslateResult)
 // For Application_test()
@@ -364,8 +366,7 @@ void Test::MeshUtils_test()
     });
 
     // Merge all face triangulations into one
-    Handle_Poly_Triangulation polyTriBox =
-            new Poly_Triangulation(countNode, countTriangle, false);
+    Handle_Poly_Triangulation polyTriBox = new Poly_Triangulation(countNode, countTriangle, false);
     {
         int idNodeOffset = 0;
         int idTriangleOffset = 0;
@@ -546,6 +547,7 @@ void Test::StringUtils_stringConversion_test()
 {
     const QString text = "test_éç²µ§_测试_Тест";
     QCOMPARE(StringUtils::fromUtf8(StringUtils::toUtf8<TCollection_AsciiString>(text)), text);
+    QCOMPARE(StringUtils::fromUtf8(StringUtils::toUtf8<Handle_TCollection_HAsciiString>(text)), text);
     QCOMPARE(StringUtils::fromUtf8(StringUtils::toUtf8<std::string>(text)), text);
     QCOMPARE(StringUtils::fromUtf16(StringUtils::toUtf16<TCollection_ExtendedString>(text)), text);
 }
@@ -630,11 +632,18 @@ void Test::LibTree_test()
 {
     const TreeNodeId nullptrId = 0;
     Tree<std::string> tree;
-    TreeNodeId n0 = tree.appendChild(0, "0");
-    TreeNodeId n0_1 = tree.appendChild(n0, "0-1");
-    TreeNodeId n0_2 = tree.appendChild(n0, "0-2");
-    TreeNodeId n0_1_1 = tree.appendChild(n0_1, "0-1-1");
-    TreeNodeId n0_1_2 = tree.appendChild(n0_1, "0-1-2");
+    std::vector<TreeNodeId> vecTreeNodeId;
+    auto fnAppendChild = [&](TreeNodeId parentId, const char* str) {
+        const TreeNodeId id = tree.appendChild(parentId, str);
+        vecTreeNodeId.push_back(id);
+        return id;
+    };
+    const TreeNodeId n0 = fnAppendChild(nullptrId, "0");
+    const TreeNodeId n0_1 = fnAppendChild(n0, "0-1");
+    const TreeNodeId n0_2 = fnAppendChild(n0, "0-2");
+    const TreeNodeId n0_1_1 = fnAppendChild(n0_1, "0-1-1");
+    const TreeNodeId n0_1_2 = fnAppendChild(n0_1, "0-1-2");
+    std::sort(vecTreeNodeId.begin(), vecTreeNodeId.end());
 
     QCOMPARE(tree.nodeParent(n0_1), n0);
     QCOMPARE(tree.nodeParent(n0_2), n0);
@@ -645,6 +654,31 @@ void Test::LibTree_test()
     QCOMPARE(tree.nodeSiblingNext(n0_1_1), n0_1_2);
     QCOMPARE(tree.nodeSiblingPrevious(n0_1_2), n0_1_1);
     QCOMPARE(tree.nodeSiblingNext(n0_1_2), nullptrId);
+
+    {
+        std::string strPreOrder;
+        traverseTree_preOrder(tree, [&](TreeNodeId id) {
+            strPreOrder += " " + tree.nodeData(id);
+        });
+        QCOMPARE(strPreOrder, " 0 0-1 0-1-1 0-1-2 0-2");
+    }
+
+    {
+        std::string strPostOrder;
+        traverseTree_postOrder(tree, [&](TreeNodeId id) {
+            strPostOrder += " " + tree.nodeData(id);
+        });
+        QCOMPARE(strPostOrder, " 0-1-1 0-1-2 0-1 0-2 0");
+    }
+
+    {
+        std::vector<TreeNodeId> vecTreeNodeIdVisited;
+        traverseTree_unorder(tree, [&](TreeNodeId id) {
+            vecTreeNodeIdVisited.push_back(id);
+        });
+        std::sort(vecTreeNodeIdVisited.begin(), vecTreeNodeIdVisited.end());
+        QCOMPARE(vecTreeNodeIdVisited, vecTreeNodeId);
+    }
 }
 
 void Test::QtGuiUtils_test()

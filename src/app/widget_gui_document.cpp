@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (c) 2020, Fougue Ltd. <http://www.fougue.pro>
+** Copyright (c) 2021, Fougue Ltd. <http://www.fougue.pro>
 ** All rights reserved.
 ** See license at https://github.com/fougue/mayo/blob/master/LICENSE.txt
 ****************************************************************************/
@@ -16,6 +16,7 @@
 #include "widget_occ_view_controller.h"
 #include "widgets_utils.h"
 
+#include <QtCore/QtDebug>
 #include <QtGui/QPainter>
 #include <QtGui/QGuiApplication>
 #include <QtWidgets/QBoxLayout>
@@ -105,8 +106,14 @@ WidgetGuiDocument::WidgetGuiDocument(GuiDocument* guiDoc, QWidget* parent)
                 m_guiDoc, &GuiDocument::stopViewCameraAnimation);
     QObject::connect(
                 m_controller, &V3dViewController::mouseClicked, this, [=](Qt::MouseButton btn) {
-        if (btn == Qt::MouseButton::LeftButton)
-            m_guiDoc->processAction(m_guiDoc->graphicsScene()->currentHighlightedOwner());
+        if (btn == Qt::MouseButton::LeftButton) {
+            if (!m_guiDoc->processAction(m_guiDoc->graphicsScene()->currentHighlightedOwner()))
+                m_guiDoc->graphicsScene()->select();
+        }
+    });
+    QObject::connect(m_controller, &WidgetOccViewController::multiSelectionToggled, this, [=](bool on) {
+        m_guiDoc->graphicsScene()->setSelectionMode(
+                    on ? GraphicsScene::SelectionMode::Multi : GraphicsScene::SelectionMode::Single);
     });
     QObject::connect(
                 m_guiDoc, &GuiDocument::viewTrihedronModeChanged,

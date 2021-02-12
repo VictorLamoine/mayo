@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (c) 2020, Fougue Ltd. <http://www.fougue.pro>
+** Copyright (c) 2021, Fougue Ltd. <http://www.fougue.pro>
 ** All rights reserved.
 ** See license at https://github.com/fougue/mayo/blob/master/LICENSE.txt
 ****************************************************************************/
@@ -12,6 +12,7 @@ class TDF_Label;
 namespace Mayo {
 
 class WidgetModelTreeBuilder_Xde : public WidgetModelTreeBuilder {
+    MAYO_DECLARE_TEXT_ID_FUNCTIONS(Mayo::WidgetModelTreeBuilder_Xde)
 public:
     bool supportsDocumentTreeNode(const DocumentTreeNode& node) const override;
     void refreshTextTreeItem(const DocumentTreeNode& node, QTreeWidgetItem* treeItem) override;

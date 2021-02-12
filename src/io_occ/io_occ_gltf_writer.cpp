@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (c) 2020, Fougue Ltd. <http://www.fougue.pro>
+** Copyright (c) 2021, Fougue Ltd. <http://www.fougue.pro>
 ** All rights reserved.
 ** See license at https://github.com/fougue/mayo/blob/master/LICENSE.txt
 ****************************************************************************/
@@ -21,14 +21,10 @@ namespace Mayo {
 namespace IO {
 
 class OccGltfWriter::Properties : public PropertyGroup {
-    MAYO_DECLARE_TEXT_ID_FUNCTIONS(Mayo::IO::OccGltfWriter_Properties)
+    MAYO_DECLARE_TEXT_ID_FUNCTIONS(Mayo::IO::OccGltfWriter::Properties)
 public:
     Properties(PropertyGroup* parentGroup)
-        : PropertyGroup(parentGroup),
-          coordinatesConverter(this, textId("coordinatesConverter"), &OccCommon::enumMeshCoordinateSystem()),
-          transformationFormat(this, textId("transformationFormat"), &enumTrsfFormat),
-          format(this, textId("format"), &enumFormat),
-          forceExportUV(this, textId("forceExportUV"))
+        : PropertyGroup(parentGroup)
     {
         this->coordinatesConverter.setDescription(
                     textIdTr("Coordinate system transformation from OpenCascade to glTF"));
@@ -36,6 +32,15 @@ public:
                     textIdTr("Preferred transformation format for writing into glTF file"));
         this->forceExportUV.setDescription(
                     textIdTr("Export UV coordinates even if there is no mapped texture"));
+
+        this->transformationFormat.mutableEnumeration().chopPrefix("RWGltf_WriterTrsfFormat_");
+        this->transformationFormat.setDescriptions({
+                    { RWGltf_WriterTrsfFormat_Compact, textIdTr("Automatically choose most compact "
+                      "representation between Mat4 and TRS") },
+                    { RWGltf_WriterTrsfFormat_Mat4, textIdTr("4x4 transformation matrix") },
+                    { RWGltf_WriterTrsfFormat_TRS, textIdTr("Transformation decomposed into Translation "
+                      "vector, Rotation quaternion and Scale factor(T * R * S)") }
+        });
     }
 
     void restoreDefaults() override {
@@ -46,21 +51,10 @@ public:
         this->forceExportUV.setValue(defaults.forceExportUV);
     }
 
-    static inline const Enumeration enumTrsfFormat = {
-        { RWGltf_WriterTrsfFormat_Compact, textId("Compact"),
-          textIdTr("Automatically choose most compact representation between Mat4 and TRS") },
-        { RWGltf_WriterTrsfFormat_Mat4, textId("Mat4"),
-          textIdTr("4x4 transformation matrix") },
-        { RWGltf_WriterTrsfFormat_TRS, textId("TRS"),
-          textIdTr("Transformation decomposed into Translation vector, Rotation quaternion and Scale factor (T * R * S)") }
-    };
-
-    static inline const Enumeration enumFormat = Enumeration::fromEnum<OccGltfWriter::Format>(textIdContext());
-
-    PropertyEnumeration coordinatesConverter;
-    PropertyEnumeration transformationFormat;
-    PropertyEnumeration format;
-    PropertyBool forceExportUV;
+    PropertyEnum<RWMesh_CoordinateSystem> coordinatesConverter{ this, textId("coordinatesConverter") };
+    PropertyEnum<RWGltf_WriterTrsfFormat> transformationFormat{ this, textId("transformationFormat") };
+    PropertyEnum<Format> format{ this, textId("format") };
+    PropertyBool forceExportUV{ this, textId("forceExportUV") };
 };
 
 bool OccGltfWriter::transfer(Span<const ApplicationItem> spanAppItem, TaskProgress*)
@@ -110,10 +104,10 @@ void OccGltfWriter::applyProperties(const PropertyGroup* params)
 {
     auto ptr = dynamic_cast<const Properties*>(params);
     if (ptr) {
-        m_params.coordinatesConverter = ptr->coordinatesConverter.valueAs<RWMesh_CoordinateSystem>();
-        m_params.forceExportUV = ptr->forceExportUV.value();
-        m_params.format = ptr->format.valueAs<Format>();
-        m_params.transformationFormat = ptr->transformationFormat.valueAs<RWGltf_WriterTrsfFormat>();
+        m_params.coordinatesConverter = ptr->coordinatesConverter;
+        m_params.forceExportUV = ptr->forceExportUV;
+        m_params.format = ptr->format;
+        m_params.transformationFormat = ptr->transformationFormat;
     }
 }
 

@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (c) 2020, Fougue Ltd. <http://www.fougue.pro>
+** Copyright (c) 2021, Fougue Ltd. <http://www.fougue.pro>
 ** All rights reserved.
 ** See license at https://github.com/fougue/mayo/blob/master/LICENSE.txt
 ****************************************************************************/
@@ -10,12 +10,14 @@
 
 #include "../base/application_ptr.h"
 #include "../base/io_parameters_provider.h"
+#include "../base/occt_enums.h"
 #include "../base/property.h"
 #include "../base/property_builtins.h"
 #include "../base/property_enumeration.h"
 #include "../base/qtcore_hfuncs.h"
 #include "../base/settings_index.h"
 #include "../base/string_utils.h"
+#include "../base/unit_system.h"
 
 #include <QtCore/QObject>
 #include <unordered_map>
@@ -40,6 +42,7 @@ public:
     StringUtils::TextOptions defaultTextOptions() const;
 
     static QString qmFilePath(const QByteArray& languageCode);
+    static QByteArray languageCode(const ApplicationPtr& app);
 
     const PropertyGroup* findReaderParameters(const IO::Format& format) const override;
     const PropertyGroup* findWriterParameters(const IO::Format& format) const override;
@@ -53,29 +56,30 @@ public:
     // System
     const Settings_GroupIndex groupId_system;
     const Settings_SectionIndex sectionId_systemUnits;
-    PropertyInt unitSystemDecimals;
-    PropertyEnumeration unitSystemSchema;
+    PropertyInt unitSystemDecimals{ this, textId("decimalCount") };
+    PropertyEnum<UnitSystem::Schema> unitSystemSchema{ this, textId("schema") };
     // Application
     const Settings_GroupIndex groupId_application;
     PropertyEnumeration language;
-    PropertyRecentFiles recentFiles;
-    PropertyQString lastOpenDir;
-    PropertyQString lastSelectedFormatFilter;
-    PropertyBool linkWithDocumentSelector;
+    PropertyRecentFiles recentFiles{ this, textId("recentFiles") };
+    PropertyQString lastOpenDir{ this, textId("lastOpenFolder") };
+    PropertyQString lastSelectedFormatFilter{ this, textId("lastSelectedFormatFilter") };
+    PropertyBool linkWithDocumentSelector{ this, textId("linkWithDocumentSelector") };
     // Graphics
     const Settings_GroupIndex groupId_graphics;
-    PropertyBool defaultShowOriginTrihedron;
+    PropertyBool defaultShowOriginTrihedron{ this, textId("defaultShowOriginTrihedron") };
+    PropertyDouble instantZoomFactor{ this, textId("instantZoomFactor") };
     // -- ClipPlanes
     const Settings_SectionIndex sectionId_graphicsClipPlanes;
-    PropertyBool clipPlanesCappingOn;
-    PropertyBool clipPlanesCappingHatchOn;
+    PropertyBool clipPlanesCappingOn{ this, textId("cappingOn") };
+    PropertyBool clipPlanesCappingHatchOn{ this, textId("cappingHatchOn") };
     // -- MeshDefaults
     const Settings_SectionIndex sectionId_graphicsMeshDefaults;
-    PropertyOccColor meshDefaultsColor;
-    PropertyOccColor meshDefaultsEdgeColor;
-    PropertyEnumeration meshDefaultsMaterial;
-    PropertyBool meshDefaultsShowEdges;
-    PropertyBool meshDefaultsShowNodes;
+    PropertyOccColor meshDefaultsColor{ this, textId("color") };
+    PropertyOccColor meshDefaultsEdgeColor{ this, textId("edgeColor") };
+    PropertyEnumeration meshDefaultsMaterial{ this, textId("material"), OcctEnums::Graphic3d_NameOfMaterial() };
+    PropertyBool meshDefaultsShowEdges{ this, textId("showEgesOn") };
+    PropertyBool meshDefaultsShowNodes{ this, textId("showNodesOn") };
 
 protected:
     void onPropertyChanged(Property* prop) override;

@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (c) 2020, Fougue Ltd. <http://www.fougue.pro>
+** Copyright (c) 2021, Fougue Ltd. <http://www.fougue.pro>
 ** All rights reserved.
 ** See license at https://github.com/fougue/mayo/blob/master/LICENSE.txt
 ****************************************************************************/
@@ -29,16 +29,18 @@ struct CafUtils {
 
 } // namespace Mayo
 
+#include <TDF_LabelMapHasher.hxx>
 namespace std {
 
 //! Specialization of C++11 std::hash<> functor for TDF_Label
 template<> struct hash<TDF_Label> {
-    inline size_t operator()(const TDF_Label& lbl) const
-    { return qHash(Mayo::CafUtils::labelTag(lbl)); }
+    inline size_t operator()(const TDF_Label& lbl) const {
+        return TDF_LabelMapHasher::HashCode(lbl, INT_MAX);
+        // return qHash(Mayo::CafUtils::labelTag(lbl));
+    }
 };
 
 } // namespace std
-
 
 // --
 // -- Implementation

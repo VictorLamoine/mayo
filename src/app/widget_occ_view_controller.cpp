@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (c) 2020, Fougue Ltd. <http://www.fougue.pro>
+** Copyright (c) 2021, Fougue Ltd. <http://www.fougue.pro>
 ** All rights reserved.
 ** See license at https://github.com/fougue/mayo/blob/master/LICENSE.txt
 ****************************************************************************/
@@ -59,8 +59,7 @@ static const QCursor& rotateCursor()
 
 WidgetOccViewController::WidgetOccViewController(WidgetOccView* widgetView)
     : V3dViewController(widgetView->v3dView(), widgetView),
-      m_widgetView(widgetView),
-      m_prevCamera(new Graphic3d_Camera)
+      m_widgetView(widgetView)
 {
     widgetView->installEventFilter(this);
 }
@@ -87,12 +86,15 @@ bool WidgetOccViewController::eventFilter(QObject* watched, QEvent* event)
                 && !keyEvent->isAutoRepeat())
         {
             this->startDynamicAction(DynamicAction::InstantZoom);
-            m_prevCamera->Copy(view->Camera());
-            const QPoint currPos = m_widgetView->mapFromGlobal(QCursor::pos());
-            const int factor = 5;
-            const int dX = factor * 100;
-            view->StartZoomAtPoint(currPos.x(), currPos.y());
-            view->ZoomAtPoint(currPos.x(), currPos.y(), currPos.x() + dX, currPos.y());
+            this->backupCamera();
+            this->instantZoomAt(m_widgetView->mapFromGlobal(QCursor::pos()));
+        }
+
+        if (keyEvent->key() == Qt::Key_Shift
+                && !keyEvent->isAutoRepeat()
+                && !this->hasCurrentDynamicAction())
+        {
+            emit this->multiSelectionToggled(true);
         }
 
         break;
@@ -104,8 +106,15 @@ bool WidgetOccViewController::eventFilter(QObject* watched, QEvent* event)
                 && this->currentDynamicAction() == DynamicAction::InstantZoom)
         {
             this->stopDynamicAction();
-            view->Camera()->Copy(m_prevCamera);
+            this->restoreCamera();
             view->Update();
+        }
+
+        if (keyEvent->key() == Qt::Key_Shift
+                && !keyEvent->isAutoRepeat()
+                && !this->hasCurrentDynamicAction())
+        {
+            emit this->multiSelectionToggled(false);
         }
 
         break;

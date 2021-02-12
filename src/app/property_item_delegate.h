@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (c) 2020, Fougue Ltd. <http://www.fougue.pro>
+** Copyright (c) 2021, Fougue Ltd. <http://www.fougue.pro>
 ** All rights reserved.
 ** See license at https://github.com/fougue/mayo/blob/master/LICENSE.txt
 ****************************************************************************/
@@ -16,6 +16,7 @@ namespace Mayo {
 
 class BasePropertyQuantity;
 
+// Provides an ItemView delegate specialized to display/edit Property objects
 class PropertyItemDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:

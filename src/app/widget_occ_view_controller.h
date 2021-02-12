@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (c) 2020, Fougue Ltd. <http://www.fougue.pro>
+** Copyright (c) 2021, Fougue Ltd. <http://www.fougue.pro>
 ** All rights reserved.
 ** See license at https://github.com/fougue/mayo/blob/master/LICENSE.txt
 ****************************************************************************/
@@ -8,7 +8,6 @@
 
 #include "../graphics/v3d_view_controller.h"
 
-#include <Graphic3d_Camera.hxx>
 class QCursor;
 class QRubberBand;
 
@@ -23,6 +22,9 @@ public:
 
     bool eventFilter(QObject* watched, QEvent* event) override;
 
+signals:
+    void multiSelectionToggled(bool on);
+
 private:
     void setViewCursor(const QCursor& cursor);
 
@@ -32,7 +34,6 @@ private:
     WidgetOccView* m_widgetView = nullptr;
     QPoint m_prevPos;
     QPoint m_posRubberBandStart;
-    Handle_Graphic3d_Camera m_prevCamera;
 };
 
 } // namespace Mayo

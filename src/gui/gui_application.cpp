@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (c) 2020, Fougue Ltd. <http://www.fougue.pro>
+** Copyright (c) 2021, Fougue Ltd. <http://www.fougue.pro>
 ** All rights reserved.
 ** See license at https://github.com/fougue/mayo/blob/master/LICENSE.txt
 ****************************************************************************/
@@ -19,7 +19,7 @@ GuiApplication::GuiApplication(const ApplicationPtr& app)
     : QObject(app.get()),
       m_app(app),
       m_selectionModel(new ApplicationItemSelectionModel(this)),
-      m_gfxEntityDriverTable(new GraphicsEntityDriverTable),
+      m_gfxObjectDriverTable(new GraphicsObjectDriverTable),
       m_gfxTreeNodeMappingDriverTable(new GraphicsTreeNodeMappingDriverTable)
 {
     QObject::connect(
@@ -28,13 +28,7 @@ GuiApplication::GuiApplication(const ApplicationPtr& app)
     QObject::connect(
                 app.get(), &Application::documentAboutToClose,
                 this, &GuiApplication::onDocumentAboutToClose);
-
-    QObject::connect(
-                m_selectionModel, &ApplicationItemSelectionModel::changed,
-                this, &GuiApplication::onApplicationItemSelectionChanged);
-    QObject::connect(
-                m_selectionModel, &ApplicationItemSelectionModel::cleared,
-                this, &GuiApplication::onApplicationItemSelectionCleared);
+    this->connectApplicationItemSelectionChanged(true);
 }
 
 GuiApplication::~GuiApplication()
@@ -58,9 +52,9 @@ ApplicationItemSelectionModel* GuiApplication::selectionModel() const
     return m_selectionModel;
 }
 
-GraphicsEntityDriverTable* GuiApplication::graphicsEntityDriverTable() const
+GraphicsObjectDriverTable* GuiApplication::graphicsObjectDriverTable() const
 {
-    return m_gfxEntityDriverTable.get();
+    return m_gfxObjectDriverTable.get();
 }
 
 GraphicsTreeNodeMappingDriverTable* GuiApplication::graphicsTreeNodeMappingDriverTable() const
@@ -88,11 +82,16 @@ void GuiApplication::onDocumentAboutToClose(const DocumentPtr& doc)
     }
 }
 
-void GuiApplication::onApplicationItemSelectionCleared()
+void GuiApplication::connectApplicationItemSelectionChanged(bool on)
 {
-    for (GuiDocument* guiDoc : m_vecGuiDocument) {
-        guiDoc->graphicsScene()->clearSelection();
-        guiDoc->graphicsScene()->redraw();
+    if (on) {
+        m_connApplicationItemSelectionChanged = QObject::connect(
+                    m_selectionModel, &ApplicationItemSelectionModel::changed,
+                    this, &GuiApplication::onApplicationItemSelectionChanged,
+                    Qt::UniqueConnection);
+    }
+    else {
+        QObject::disconnect(m_connApplicationItemSelectionChanged);
     }
 }
 

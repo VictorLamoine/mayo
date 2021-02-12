@@ -1,10 +1,11 @@
 /****************************************************************************
-** Copyright (c) 2020, Fougue Ltd. <http://www.fougue.pro>
+** Copyright (c) 2021, Fougue Ltd. <http://www.fougue.pro>
 ** All rights reserved.
 ** See license at https://github.com/fougue/mayo/blob/master/LICENSE.txt
 ****************************************************************************/
 
 #include "theme.h"
+#include "../base/meta_enum.h"
 #include "../base/span.h"
 
 #include <QtGui/QImage>
@@ -24,26 +25,28 @@ static QString cssFlatComboBox(
 {
     const QPalette appPalette = qApp->palette();
     const QString css = QString(
-                "QComboBox {"
-                "    border-style: solid;"
-                "    background: %1;"
-                "    padding: 2px 15px 2px 10px;"
-                "}\n"
-                "QComboBox:hover {"
-                "    border-style: solid;"
-                "    background: %2;"
-                "    padding: 2px 15px 2px 10px;"
-                "}\n"
-                "QComboBox::drop-down {"
-                "    subcontrol-origin: padding;"
-                "    subcontrol-position: top right;"
-                "    width: 15px;"
-                "    border-left-width: 0px;"
-                "    border-top-right-radius: 3px;"
-                "    border-bottom-right-radius: 3px;"
-                "}\n"
-                "QComboBox::down-arrow { image: url(%3); }\n"
-                "QComboBox::down-arrow:disabled { image: url(%4); }\n"
+                R"(
+                QComboBox {
+                    border-style: solid;
+                    background: %1;
+                    padding: 2px 15px 2px 10px;
+                }
+                QComboBox:hover {
+                    border-style: solid;
+                    background: %2;
+                    padding: 2px 15px 2px 10px;
+                }
+                QComboBox::drop-down {
+                    subcontrol-origin: padding;
+                    subcontrol-position: top right;
+                    width: 15px;
+                    border-left-width: 0px;
+                    border-top-right-radius: 3px;
+                    border-bottom-right-radius: 3px;
+                }
+                QComboBox::down-arrow { image: url(%3); }
+                QComboBox::down-arrow:disabled { image: url(%4); }
+                )"
                 ).arg(appPalette.color(QPalette::Window).name(),
                       appPalette.color(QPalette::Window).darker(110).name(),
                       urlPixDownArrow,
@@ -53,7 +56,6 @@ static QString cssFlatComboBox(
 
 static QPixmap invertedPixmap(const QPixmap& pix)
 {
-    QPixmap pixInv;
     QImage img = pix.toImage();
     img.invertPixels();
     return QPixmap::fromImage(img);
@@ -95,44 +97,6 @@ static QString iconFileName(Theme::Icon icn)
     case Theme::Icon::XdeSimpleShape: return "xde-simple-shape.svg";
     }
     return QString();
-}
-
-static Span<const Theme::Icon> themeIcons()
-{
-    static const Theme::Icon arrayIcons[] = {
-        Theme::Icon::AddFile,
-        Theme::Icon::File,
-        Theme::Icon::OpenFiles,
-        Theme::Icon::Import,
-        Theme::Icon::Edit,
-        Theme::Icon::Export,
-        Theme::Icon::Expand,
-        Theme::Icon::Cross,
-        Theme::Icon::Link,
-        Theme::Icon::Back,
-        Theme::Icon::Next,
-        Theme::Icon::Camera,
-        Theme::Icon::LeftSidebar,
-        Theme::Icon::BackSquare,
-        Theme::Icon::IndicatorDown,
-        Theme::Icon::Stop,
-        Theme::Icon::Gear,
-        Theme::Icon::ZoomIn,
-        Theme::Icon::ZoomOut,
-        Theme::Icon::ClipPlane,
-        Theme::Icon::View3dIso,
-        Theme::Icon::View3dLeft,
-        Theme::Icon::View3dRight,
-        Theme::Icon::View3dTop,
-        Theme::Icon::View3dBottom,
-        Theme::Icon::View3dFront,
-        Theme::Icon::View3dBack,
-        Theme::Icon::ItemMesh,
-        Theme::Icon::ItemXde,
-        Theme::Icon::XdeAssembly,
-        Theme::Icon::XdeSimpleShape
-    };
-    return arrayIcons;
 }
 
 static const QIcon nullQIcon = {};
@@ -179,7 +143,7 @@ public:
     void setup() override
     {
         const QString icnBasePath = ":/images/themes/classic/";
-        for (const Icon& icn : themeIcons()) {
+        for (const Icon icn : MetaEnum::values<Theme::Icon>()) {
             const QString icnFileName = iconFileName(icn);
             m_mapIcon.emplace(icn, QIcon(QPixmap(icnBasePath + icnFileName)));
         }
@@ -241,15 +205,18 @@ public:
         auto fnIsNeutralIcon = [](Icon icn) {
             return icn == Icon::AddFile || icn == Icon::OpenFiles || icn == Icon::Stop;
         };
-        for (const Icon icn : themeIcons()) {
+        for (Icon icn : MetaEnum::values<Theme::Icon>()) {
             const QString icnFileName = iconFileName(icn);
             const QString icnBasePath =
                     !fnIsNeutralIcon(icn) ?
                         ":/images/themes/dark/" :
                         ":/images/themes/classic/";
             QPixmap pix(icnBasePath + icnFileName);
-            if (!fnIsNeutralIcon(icn))
-                pix = invertedPixmap(pix);
+            if (!fnIsNeutralIcon(icn)) {
+                const bool invertColors = icn != Icon::XdeAssembly && icn != Icon::XdeSimpleShape;
+                if (invertColors)
+                    pix = invertedPixmap(pix);
+            }
 
             m_mapIcon.emplace(icn, pix);
         }
@@ -257,12 +224,12 @@ public:
         qApp->setStyle(QStyleFactory::create("Fusion"));
         QPalette p = qApp->palette();
         p.setColor(QPalette::Base, QColor(80, 80, 80));
-        p.setColor(QPalette::Window, QColor(53, 53, 53));
+        p.setColor(QPalette::Window, QColor(37, 37, 37));
         p.setColor(QPalette::Button, QColor(73, 73, 73));
-        p.setColor(QPalette::Highlight, QColor(110, 110, 110));
         p.setColor(QPalette::Text, Qt::white);
         p.setColor(QPalette::ButtonText, Qt::white);
         p.setColor(QPalette::WindowText, Qt::white);
+        p.setColor(QPalette::HighlightedText, Qt::white);
         const QColor linkColor(115, 131, 191);
         p.setColor(QPalette::Link, linkColor);
         p.setColor(QPalette::LinkVisited, linkColor);
@@ -279,23 +246,43 @@ public:
         qApp->setPalette(p);
 
         const QString css =
-                "QFrame[frameShape=\"5\"] { color: gray; margin-top: 2px; margin-bottom: 2px; } "
-                "QAbstractItemView { background: rgb(53,53,53); } "
-                "QAbstractItemView::item:hover { background: #606060; }"
-                "QLineEdit { background: #505050; }"
-                "QMenu { background: #505050; border: 1px solid rgb(100,100,100); }"
-                "QMenu::item:selected { background: rgb(110,110,110); }"
-                "QTextEdit { background: #505050; }"
-                "QSpinBox  { background: #505050; }"
-                "QDoubleSpinBox { background: #505050; }"
-                "QToolButton:checked { background: #383838; }"
-                "QToolButton:pressed { background: #383838; }"
-                "QComboBox { background: #505050; } "
-                "QGroupBox { border: 1px solid #808080; margin-top: 4ex; } "
-                "QFileDialog { background: #505050; } "
-                "QComboBox:editable { background: #505050; } "
-                "QComboBox::disabled { background: rgb(40,40,40); } "
-                "QProgressBar { background: #505050; }";
+                R"(
+                QFrame[frameShape="5"] {
+                    color: gray;
+                    margin-top: 2px;
+                    margin-bottom: 2px;
+                }
+                QAbstractItemView {
+                    show-decoration-selected: 1;
+                    background: #252525;
+                    selection-background-color: #505050;
+                }
+                QAbstractItemView::item:hover { background: #383838; }
+                QMenu {
+                    background: #252525;
+                    border: 1px solid rgb(100,100,100);
+                }
+                QMenu::item:selected { background: rgb(110,110,110); }
+                QMenu::separator {
+                    background: rgb(110,110,110);
+                    height: 1px;
+                }
+                QLineEdit { background: #505050; }
+                QTextEdit { background: #505050; }
+                QSpinBox  { background: #505050; }
+                QDoubleSpinBox { background: #505050; }
+                QToolButton:checked { background: #383838; }
+                QToolButton:pressed { background: #383838; }
+                QComboBox { background: #505050; }
+                QGroupBox {
+                    border: 1px solid #808080;
+                    margin-top: 4ex;
+                }
+                QFileDialog { background: #505050; }
+                QComboBox:editable { background: #505050; }
+                QComboBox:disabled { background: rgb(40,40,40); }
+                QProgressBar { background: #505050; }
+                )";
         qApp->setStyleSheet(css);
     }
 

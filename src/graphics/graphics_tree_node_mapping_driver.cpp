@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (c) 2020, Fougue Ltd. <http://www.fougue.pro>
+** Copyright (c) 2021, Fougue Ltd. <http://www.fougue.pro>
 ** All rights reserved.
 ** See license at https://github.com/fougue/mayo/blob/master/LICENSE.txt
 ****************************************************************************/
@@ -25,7 +25,7 @@ GraphicsShapeTreeNodeMappingDriver::createMapping(const DocumentTreeNode& entity
     int solidCount = 0;
     int faceCount = 0;
     const DocumentPtr doc = entityTreeNode.document();
-    deepForeachTreeNode(entityTreeNode.id(), doc->modelTree(), [&](TreeNodeId treeNodeId) {
+    traverseTree(entityTreeNode.id(), doc->modelTree(), [&](TreeNodeId treeNodeId) {
         const TopoDS_Shape shape = XCaf::shape(doc->modelTree().nodeData(treeNodeId));
         if (shape.ShapeType() == TopAbs_SOLID)
             ++solidCount;

@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (c) 2020, Fougue Ltd. <http://www.fougue.pro>
+** Copyright (c) 2021, Fougue Ltd. <http://www.fougue.pro>
 ** All rights reserved.
 ** See license at https://github.com/fougue/mayo/blob/master/LICENSE.txt
 ****************************************************************************/
@@ -8,6 +8,7 @@
 
 #include "../base/application_item.h"
 #include "../base/property.h"
+#include "../gui/gui_document.h"
 
 #include <QtWidgets/QWidget>
 #include <functional>
@@ -56,14 +57,22 @@ public:
 private:
     void onDocumentAdded(const DocumentPtr& doc);
     void onDocumentAboutToClose(const DocumentPtr& doc);
-    //void onDocumentPropertyChanged(Document* doc, Property* prop);
     void onDocumentNameChanged(const DocumentPtr& doc, const QString& name);
     void onDocumentEntityAdded(const DocumentPtr& doc, TreeNodeId entityId);
     void onDocumentEntityAboutToBeDestroyed(const DocumentPtr& doc, TreeNodeId entityId);
-    //void onDocumentEntityPropertyChanged(DocumentItem* docItem, Property* prop);
 
     void onTreeWidgetDocumentSelectionChanged(
             const QItemSelection& selected, const QItemSelection& deselected);
+    void onApplicationItemSelectionModelChanged(
+            Span<ApplicationItem> selected, Span<ApplicationItem> deselected);
+
+    void connectTreeModelDataChanged(bool on);
+    void connectTreeWidgetDocumentSelectionChanged(bool on);
+
+    void onTreeModelDataChanged(
+            const QModelIndex& topLeft, const QModelIndex& bottomRight, const QVector<int>& roles);
+    void onNodesVisibilityChanged(
+            const GuiDocument* guiDoc, const std::unordered_map<TreeNodeId, Qt::CheckState>& mapNodeId);
 
     QTreeWidgetItem* loadDocumentEntity(const DocumentTreeNode& entityNode);
 
@@ -77,6 +86,8 @@ private:
     GuiApplication* m_guiApp = nullptr;
     std::vector<BuilderPtr> m_vecBuilder;
     QString m_refItemTextTemplate;
+    QMetaObject::Connection m_connTreeModelDataChanged;
+    QMetaObject::Connection m_connTreeWidgetDocumentSelectionChanged;
 };
 
 } // namespace Mayo

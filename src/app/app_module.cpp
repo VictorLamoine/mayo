@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (c) 2020, Fougue Ltd. <http://www.fougue.pro>
+** Copyright (c) 2021, Fougue Ltd. <http://www.fougue.pro>
 ** All rights reserved.
 ** See license at https://github.com/fougue/mayo/blob/master/LICENSE.txt
 ****************************************************************************/
@@ -12,7 +12,7 @@
 #include "../base/io_system.h"
 #include "../base/occt_enums.h"
 #include "../base/settings.h"
-#include "../graphics/graphics_entity_driver.h"
+#include "../graphics/graphics_object_driver.h"
 #include "../gui/gui_application.h"
 #include "../gui/gui_document.h"
 
@@ -21,50 +21,24 @@
 
 namespace Mayo {
 
-static inline const Enumeration enumUnitSchemas = {
-    { UnitSystem::SI, AppModule::textId("SI"), {} },
-    { UnitSystem::ImperialUK, AppModule::textId("IMPERIAL_UK"), {} }
-};
-
 static inline const Enumeration enumLanguages = {
-    { 0, AppModule::textId("en"), {} },
-    { 1, AppModule::textId("fr"), {} }
+    { 0, AppModule::textId("en") },
+    { 1, AppModule::textId("fr") }
 };
 
 AppModule::AppModule(Application* app)
     : QObject(app),
       PropertyGroup(app->settings()),
       m_app(app),
-      // System
       groupId_system(app->settings()->addGroup(textId("system"))),
-      // -- Units
-      sectionId_systemUnits(
-          app->settings()->addSection(this->groupId_system, textId("units"))),
-      unitSystemDecimals(app->settings(), textId("decimalCount")),
-      unitSystemSchema(app->settings(), textId("schema"), &enumUnitSchemas),
-      // Application
+      sectionId_systemUnits(app->settings()->addSection(this->groupId_system, textId("units"))),
       groupId_application(app->settings()->addGroup(textId("application"))),
-      language(this, textId("language"), &enumLanguages),
-      recentFiles(this, textId("recentFiles")),
-      lastOpenDir(this, textId("lastOpenFolder")),
-      lastSelectedFormatFilter(this, textId("lastSelectedFormatFilter")),
-      linkWithDocumentSelector(this, textId("linkWithDocumentSelector")),
-      // Graphics
+      language(this, textId("language"), enumLanguages),
       groupId_graphics(app->settings()->addGroup(textId("graphics"))),
-      defaultShowOriginTrihedron(this, textId("defaultShowOriginTrihedron")),
-      // -- Clip planes
       sectionId_graphicsClipPlanes(
           app->settings()->addSection(this->groupId_graphics, textId("clipPlanes"))),
-      clipPlanesCappingOn(this, textId("cappingOn")),
-      clipPlanesCappingHatchOn(this, textId("cappingHatchOn")),
-      // -- Mesh defaults
       sectionId_graphicsMeshDefaults(
-          app->settings()->addSection(this->groupId_graphics, textId("meshDefaults"))),
-      meshDefaultsColor(this, textId("color")),
-      meshDefaultsEdgeColor(this, textId("edgeColor")),
-      meshDefaultsMaterial(this, textId("material"), &OcctEnums::Graphic3d_NameOfMaterial()),
-      meshDefaultsShowEdges(this, textId("showEgesOn")),
-      meshDefaultsShowNodes(this, textId("showNodesOn"))
+          app->settings()->addSection(this->groupId_graphics, textId("meshDefaults")))
 {
     auto settings = app->settings();
 
@@ -99,6 +73,7 @@ AppModule::AppModule(Application* app)
                 tr("Show or hide by default the trihedron centered at world origin. "
                    "This doesn't affect 3D view of currently opened documents"));
     settings->addSetting(&this->defaultShowOriginTrihedron, this->groupId_graphics);
+    settings->addSetting(&this->instantZoomFactor, this->groupId_graphics);
     // -- Clip planes
     this->clipPlanesCappingOn.setDescription(
                 tr("Enable capping of currently clipped graphics"));
@@ -160,9 +135,10 @@ AppModule::AppModule(Application* app)
     });
     settings->addGroupResetFunction(this->groupId_graphics, [&]{
         this->defaultShowOriginTrihedron.setValue(true);
+        this->instantZoomFactor.setValue(5.);
         this->clipPlanesCappingOn.setValue(true);
         this->clipPlanesCappingHatchOn.setValue(true);
-        const GraphicsMeshEntityDriver::DefaultValues meshDefaults;
+        const GraphicsMeshObjectDriver::DefaultValues meshDefaults;
         this->meshDefaultsColor.setValue(meshDefaults.color);
         this->meshDefaultsEdgeColor.setValue(meshDefaults.edgeColor);
         this->meshDefaultsMaterial.setValue(meshDefaults.material);
@@ -175,14 +151,22 @@ StringUtils::TextOptions AppModule::defaultTextOptions() const
 {
     StringUtils::TextOptions opts;
     opts.locale = m_app->settings()->locale();
-    opts.unitDecimals = this->unitSystemDecimals.value();
-    opts.unitSchema = this->unitSystemSchema.valueAs<UnitSystem::Schema>();
+    opts.unitDecimals = this->unitSystemDecimals;
+    opts.unitSchema = this->unitSystemSchema;
     return opts;
 }
 
 QString AppModule::qmFilePath(const QByteArray& languageCode)
 {
     return QString(":/i18n/mayo_%1.qm").arg(QString::fromUtf8(languageCode));
+}
+
+QByteArray AppModule::languageCode(const ApplicationPtr& app)
+{
+    const char keyLang[] = "application/language";
+    const Settings* settings = app->settings();
+    const QByteArray code = app ? settings->findValueFromKey(keyLang).toByteArray() : QByteArray();
+    return !code.isEmpty() ? code : enumLanguages.findName(0);
 }
 
 const PropertyGroup* AppModule::findReaderParameters(const IO::Format& format) const
@@ -294,13 +278,13 @@ void AppModule::onPropertyChanged(Property* prop)
             || prop == &this->meshDefaultsShowEdges
             || prop == &this->meshDefaultsShowNodes)
     {
-        auto values = GraphicsMeshEntityDriver::defaultValues();
+        auto values = GraphicsMeshObjectDriver::defaultValues();
         values.color = this->meshDefaultsColor.value();
         values.edgeColor = this->meshDefaultsEdgeColor.value();
-        values.material = this->meshDefaultsMaterial.valueAs<Graphic3d_NameOfMaterial>();
+        values.material = static_cast<Graphic3d_NameOfMaterial>(this->meshDefaultsMaterial.value());
         values.showEdges = this->meshDefaultsShowEdges.value();
         values.showNodes = this->meshDefaultsShowNodes.value();
-        GraphicsMeshEntityDriver::setDefaultValues(values);
+        GraphicsMeshObjectDriver::setDefaultValues(values);
     }
 
     PropertyGroup::onPropertyChanged(prop);

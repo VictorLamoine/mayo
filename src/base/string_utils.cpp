@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (c) 2020, Fougue Ltd. <http://www.fougue.pro>
+** Copyright (c) 2021, Fougue Ltd. <http://www.fougue.pro>
 ** All rights reserved.
 ** See license at https://github.com/fougue/mayo/blob/master/LICENSE.txt
 ****************************************************************************/
@@ -105,6 +105,20 @@ QString StringUtils::bytesText(uint64_t sizeBytes, const QLocale& locale)
         return tr("%1%2").arg(locale.toString(qSizeBytes / double(oneMB), 'f', 1), tr("MB"));
     else
         return tr("%1%2").arg(locale.toString(qSizeBytes / oneMB), tr("MB"));
+}
+
+QString StringUtils::yesNoText(bool on)
+{
+    return on ? tr("Yes") : tr("No");
+}
+
+QString StringUtils::yesNoText(Qt::CheckState state)
+{
+    switch (state) {
+    case Qt::Unchecked: return tr("No");
+    case Qt::PartiallyChecked: return tr("Partially");
+    case Qt::Checked: return tr("Yes");
+    }
 }
 
 void StringUtils::append(QString* dst, const QString& str, const QLocale& locale)

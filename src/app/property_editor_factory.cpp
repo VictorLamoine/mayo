@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (c) 2020, Fougue Ltd. <http://www.fougue.pro>
+** Copyright (c) 2021, Fougue Ltd. <http://www.fougue.pro>
 ** All rights reserved.
 ** See license at https://github.com/fougue/mayo/blob/master/LICENSE.txt
 ****************************************************************************/
@@ -39,11 +39,6 @@ static QWidget* hSpacerWidget(QWidget* parent, int stretch = 1)
     return widget;
 }
 
-static QString stringYesNo(bool on)
-{
-    return on ? PropertyEditorI18N::tr("Yes") : PropertyEditorI18N::tr("No");
-}
-
 struct InterfacePropertyEditor {
     virtual void syncWithProperty() = 0;
 };
@@ -54,13 +49,13 @@ struct PropertyBoolEditor : public InterfacePropertyEditor, public QCheckBox {
     {
         QObject::connect(this, &QCheckBox::toggled, [=](bool on) {
             property->setValue(on);
-            this->setText(stringYesNo(on));
+            this->setText(StringUtils::yesNoText(on));
         });
     }
 
     void syncWithProperty() override {
-        this->setText(stringYesNo(m_property->value()));
-        this->setChecked(m_property->value());
+        this->setText(StringUtils::yesNoText(*m_property));
+        this->setChecked(*m_property);
     }
 
     PropertyBool* m_property;
@@ -109,6 +104,25 @@ struct PropertyDoubleEditor : public InterfacePropertyEditor, public QDoubleSpin
     PropertyDouble* m_property;
 };
 
+struct PropertyCheckStateEditor : public InterfacePropertyEditor, public QCheckBox {
+    PropertyCheckStateEditor(PropertyCheckState* property, QWidget* parentWidget)
+        : QCheckBox(parentWidget), m_property(property)
+    {
+        //this->setTristate();
+        QObject::connect(this, &QCheckBox::stateChanged, [=](int state) {
+            property->setValue(Qt::CheckState(state));
+            this->setText(StringUtils::yesNoText(Qt::CheckState(state)));
+        });
+    }
+
+    void syncWithProperty() override {
+        this->setText(StringUtils::yesNoText(*m_property));
+        this->setChecked(*m_property);
+    }
+
+    PropertyCheckState* m_property;
+};
+
 struct PropertyQStringEditor : public InterfacePropertyEditor, public QLineEdit {
     PropertyQStringEditor(PropertyQString* property, QWidget* parentWidget)
         : QLineEdit(parentWidget), m_property(property)
@@ -129,20 +143,18 @@ struct PropertyEnumerationEditor : public InterfacePropertyEditor, public QCombo
     PropertyEnumerationEditor(PropertyEnumeration* property, QWidget* parentWidget)
         : QComboBox(parentWidget), m_property(property)
     {
-        const Enumeration* enumDef = property->enumeration();
-        if (enumDef) {
-            for (const Enumeration::Item& enumItem : enumDef->items()) {
-                this->addItem(enumItem.name.tr(), enumItem.value);
-                if (!enumItem.description.isEmpty()) {
-                    const int itemIndex = this->count() - 1;
-                    this->setItemData(itemIndex, enumItem.description, Qt::ToolTipRole);
-                }
+        for (const Enumeration::Item& enumItem : property->enumeration().items()) {
+            this->addItem(enumItem.name.tr(), enumItem.value);
+            const QString itemDescr = property->findDescription(enumItem.value);
+            if (!itemDescr.isEmpty()) {
+                const int itemIndex = this->count() - 1;
+                this->setItemData(itemIndex, itemDescr, Qt::ToolTipRole);
             }
-
-            QObject::connect(this, qOverload<int>(&QComboBox::activated), [=](int index) {
-                property->setValue(this->itemData(index).toInt());
-            });
         }
+
+        QObject::connect(this, qOverload<int>(&QComboBox::activated), [=](int index) {
+            property->setValue(this->itemData(index).toInt());
+        });
     }
 
     void syncWithProperty() override {
@@ -214,8 +226,7 @@ struct PropertyOccPntEditor : public InterfacePropertyEditor, public QWidget {
     void syncWithProperty() override {
         auto fnSetEditorCoord = [](QDoubleSpinBox* editor, double coord){
             auto appModule = AppModule::get(Application::instance());
-            auto unitSchema = appModule->unitSystemSchema.valueAs<UnitSystem::Schema>();
-            auto trRes = UnitSystem::translate(unitSchema, coord * Quantity_Millimeter);
+            auto trRes = UnitSystem::translate(appModule->unitSystemSchema, coord * Quantity_Millimeter);
             QSignalBlocker sigBlock(editor); Q_UNUSED(sigBlock);
             editor->setValue(trRes.value);
         };
@@ -232,8 +243,7 @@ struct PropertyOccPntEditor : public InterfacePropertyEditor, public QWidget {
     {
         auto editor = new QDoubleSpinBox(parentWidget);
         auto appModule = AppModule::get(Application::instance());
-        auto unitSchema = appModule->unitSystemSchema.valueAs<UnitSystem::Schema>();
-        auto trRes = UnitSystem::translate(unitSchema, 1., Unit::Length);
+        auto trRes = UnitSystem::translate(appModule->unitSystemSchema, 1., Unit::Length);
         //editor->setSuffix(QString::fromUtf8(trRes.strUnit));
         editor->setDecimals(appModule->unitSystemDecimals.value());
         editor->setButtonSymbols(QDoubleSpinBox::NoButtons);
@@ -304,6 +314,9 @@ QWidget* DefaultPropertyEditorFactory::createEditor(Property* property, QWidget*
     if (propTypeName == PropertyDouble::TypeName)
         editor = new PropertyDoubleEditor(static_cast<PropertyDouble*>(property), parentWidget);
 
+    if (propTypeName == PropertyCheckState::TypeName)
+        editor = new PropertyCheckStateEditor(static_cast<PropertyCheckState*>(property), parentWidget);
+
     if (propTypeName == PropertyQString::TypeName)
         editor = new PropertyQStringEditor(static_cast<PropertyQString*>(property), parentWidget);
 
@@ -343,7 +356,7 @@ UnitSystem::TranslateResult PropertyEditorFactory::unitTranslate(const BasePrope
     }
 
     return UnitSystem::translate(
-                AppModule::get(Application::instance())->unitSystemSchema.valueAs<UnitSystem::Schema>(),
+                AppModule::get(Application::instance())->unitSystemSchema,
                 property->quantityValue(),
                 property->quantityUnit());
 }

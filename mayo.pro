@@ -1,5 +1,5 @@
 #****************************************************************************
-#* Copyright (c) 2020, Fougue Ltd. <http://www.fougue.pro>
+#* Copyright (c) 2021, Fougue Ltd. <http://www.fougue.pro>
 #* All rights reserved.
 #* See license at https://github.com/fougue/mayo/blob/master/LICENSE.txt
 #****************************************************************************
@@ -76,6 +76,8 @@ win* {
 
 FORMS += $$files(src/app/*.ui)
 
+#SOURCES += i18n/messages.cpp
+
 TRANSLATIONS += \
     i18n/mayo_en.ts \
     i18n/mayo_fr.ts
@@ -151,14 +153,21 @@ LIBS += -lTKVRML
 CASCADE_LIST_OPTBIN_DIR = $$split(CASCADE_OPTBIN_DIRS, ;)
 for(binPath, CASCADE_LIST_OPTBIN_DIR) {
     lowerBinPath = $$lower($${binPath})
+
     findLib = $$find(lowerBinPath, "ffmpeg")
     !isEmpty(findLib):FFMPEG_BIN_DIR = $${binPath}
+
     findLib = $$find(lowerBinPath, "freeimage")
     !isEmpty(findLib):FREEIMAGE_BIN_DIR = $${binPath}
+
     findLib = $$find(lowerBinPath, "freetype")
     !isEmpty(findLib):FREETYPE_BIN_DIR = $${binPath}
+
     findLib = $$find(lowerBinPath, "tbb")
     !isEmpty(findLib):TBB_BIN_DIR = $${binPath}
+
+    findLib = $$find(lowerBinPath, "openvr")
+    !isEmpty(findLib):OPENVR_BIN_DIR = $${binPath}
 }
 
 # -- Create file "opencascade_dlls.iss" that will contain the required OpenCascade DLL files to be
@@ -182,16 +191,20 @@ isEmpty(GMIO_ROOT) {
 } else {
     message(gmio ON)
     CONFIG(debug, debug|release) {
-        GMIO_BIN_SUFFIX = d
+        #GMIO_BIN_SUFFIX = d
+        GMIO_BIN_SUFFIX =
     } else {
         GMIO_BIN_SUFFIX =
     }
 
+    HEADERS += $$files(src/io_gmio/*.h)
+    SOURCES += $$files(src/io_gmio/*.cpp)
+
     INCLUDEPATH += $$GMIO_ROOT/include
-    LIBS += -L$$GMIO_ROOT/lib -lgmio_static$$GMIO_BIN_SUFFIX
+    LIBS += -L$$GMIO_ROOT/lib -lgmio_static -lzlibstatic
     SOURCES += \
-        $$GMIO_ROOT/src/gmio_support/stl_occ_brep.cpp \
-        $$GMIO_ROOT/src/gmio_support/stl_occ_polytri.cpp \
+#        $$GMIO_ROOT/src/gmio_support/stl_occ_brep.cpp \
+#        $$GMIO_ROOT/src/gmio_support/stl_occ_polytri.cpp \
         $$GMIO_ROOT/src/gmio_support/stream_qt.cpp
     DEFINES += HAVE_GMIO
 }

@@ -1,11 +1,12 @@
 /****************************************************************************
-** Copyright (c) 2020, Fougue Ltd. <http://www.fougue.pro>
+** Copyright (c) 2021, Fougue Ltd. <http://www.fougue.pro>
 ** All rights reserved.
 ** See license at https://github.com/fougue/mayo/blob/master/LICENSE.txt
 ****************************************************************************/
 
 #pragma once
 
+#include "graphics_object_ptr.h"
 #include <AIS_InteractiveContext.hxx>
 #include <AIS_InteractiveObject.hxx>
 #include <Aspect_Window.hxx>
@@ -28,7 +29,11 @@ struct GraphicsUtils {
             const Handle_AIS_InteractiveContext& context,
             const Handle_AIS_InteractiveObject& object,
             bool on);
-    static Bnd_Box AisObject_boundingBox(const Handle_AIS_InteractiveObject& object);
+
+    static AIS_InteractiveContext* AisObject_contextPtr(const GraphicsObjectPtr& object);
+    static bool AisObject_isVisible(const GraphicsObjectPtr& object);
+    static void AisObject_setVisible(const GraphicsObjectPtr& object, bool on);
+    static Bnd_Box AisObject_boundingBox(const GraphicsObjectPtr& object);
 
     static int AspectWindow_width(const Handle_Aspect_Window& wnd);
     static int AspectWindow_height(const Handle_Aspect_Window& wnd);

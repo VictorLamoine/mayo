@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (c) 2020, Fougue Ltd. <http://www.fougue.pro>
+** Copyright (c) 2021, Fougue Ltd. <http://www.fougue.pro>
 ** All rights reserved.
 ** See license at https://github.com/fougue/mayo/blob/master/LICENSE.txt
 ****************************************************************************/
@@ -24,7 +24,7 @@ static std::vector<ApplicationItem>::iterator findApplicationItem(
 
 } // namespace Internal
 
-ApplicationItemSelectionModel::ApplicationItemSelectionModel(QObject *parent)
+ApplicationItemSelectionModel::ApplicationItemSelectionModel(QObject* parent)
     : QObject(parent)
 {
 }
@@ -32,6 +32,11 @@ ApplicationItemSelectionModel::ApplicationItemSelectionModel(QObject *parent)
 Span<const ApplicationItem> ApplicationItemSelectionModel::selectedItems() const
 {
     return m_vecSelectedItem;
+}
+
+bool ApplicationItemSelectionModel::isSelected(const ApplicationItem& item)
+{
+    return Internal::hasApplicationItem(m_vecSelectedItem, item);
 }
 
 void ApplicationItemSelectionModel::add(const ApplicationItem& item)
@@ -85,8 +90,8 @@ void ApplicationItemSelectionModel::remove(Span<ApplicationItem> vecItem)
 void ApplicationItemSelectionModel::clear()
 {
     if (!m_vecSelectedItem.empty()) {
+        emit changed({}, m_vecSelectedItem);
         m_vecSelectedItem.clear();
-        emit cleared();
     }
 }
 

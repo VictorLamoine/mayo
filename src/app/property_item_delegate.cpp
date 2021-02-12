@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (c) 2020, Fougue Ltd. <http://www.fougue.pro>
+** Copyright (c) 2021, Fougue Ltd. <http://www.fougue.pro>
 ** All rights reserved.
 ** See license at https://github.com/fougue/mayo/blob/master/LICENSE.txt
 ****************************************************************************/
@@ -8,6 +8,7 @@
 #include "../base/application.h"
 #include "../base/property_builtins.h"
 #include "../base/settings.h"
+#include "../base/string_utils.h"
 #include "../base/unit_system.h"
 #include "../gui/qtgui_utils.h"
 #include "app_module.h"
@@ -15,43 +16,10 @@
 
 #include <QtGui/QPainter>
 #include <QtWidgets/QApplication>
-#include <QtWidgets/QBoxLayout>
 
 namespace Mayo {
 
 namespace {
-
-class PanelEditor : public QWidget {
-public:
-    PanelEditor(QWidget* parent = nullptr)
-        : QWidget(parent)
-    {}
-
-    static QWidget* create(QWidget* parentWidget)
-    {
-        auto frame = new PanelEditor(parentWidget);
-        auto layout = new QHBoxLayout(frame);
-        layout->setContentsMargins(2, 0, 0, 0);
-        return frame;
-    }
-
-protected:
-    void paintEvent(QPaintEvent*) override
-    {
-        QPainter painter(this);
-
-        // This is needed by the "classic" theme, force a painted background
-        const QRect frame = this->frameGeometry();
-        const QRect surface(0, 0, frame.width(), frame.height());
-        const QColor panelColor = palette().color(QPalette::Base);
-        painter.fillRect(surface, panelColor);
-
-        QStyleOption option;
-        option.initFrom(this);
-        option.state |= QStyle::State_HasFocus;
-        this->style()->drawPrimitive(QStyle::PE_FrameLineEdit, &option, &painter, this);
-    }
-};
 
 static QString toStringDHMS(QuantityTime time)
 {
@@ -67,10 +35,13 @@ static QString toStringDHMS(QuantityTime time)
     QString text;
     if (dayCount > 0)
         text += PropertyItemDelegate::tr("%1d ").arg(dayCount);
+
     if (hourCount > 0)
         text += PropertyItemDelegate::tr("%1h ").arg(hourCount);
+
     if (minCount > 0)
         text += PropertyItemDelegate::tr("%1min ").arg(minCount);
+
     if (secCount > 0)
         text += PropertyItemDelegate::tr("%1s").arg(secCount);
 
@@ -78,7 +49,7 @@ static QString toStringDHMS(QuantityTime time)
 }
 
 static QString propertyValueText(const PropertyBool* prop) {
-    return prop->value() ? PropertyItemDelegate::tr("Yes") : PropertyItemDelegate::tr("No");
+    return StringUtils::yesNoText(*prop);
 }
 
 static QString propertyValueText(const PropertyInt* prop) {
@@ -87,6 +58,10 @@ static QString propertyValueText(const PropertyInt* prop) {
 
 static QString propertyValueText(const PropertyDouble* prop) {
     return StringUtils::text(prop->value(), AppModule::get(Application::instance())->defaultTextOptions());
+}
+
+static QString propertyValueText(const PropertyCheckState* prop) {
+    return StringUtils::yesNoText(*prop);
 }
 
 static QString propertyValueText(const PropertyQByteArray* prop) {
@@ -115,10 +90,7 @@ static QString propertyValueText(const PropertyOccTrsf* prop) {
 
 static QString propertyValueText(const PropertyEnumeration* prop)
 {
-    if (!prop->enumeration())
-        return QString();
-
-    for (const Enumeration::Item& enumItem : prop->enumeration()->items()) {
+    for (const Enumeration::Item& enumItem : prop->enumeration().items()) {
         if (enumItem.value == prop->value())
             return enumItem.name.tr();
     }
@@ -242,6 +214,9 @@ QString PropertyItemDelegate::displayText(const QVariant& value, const QLocale&)
         if (propTypeName == PropertyDouble::TypeName)
             return propertyValueText(static_cast<const PropertyDouble*>(prop));
 
+        if (propTypeName == PropertyCheckState::TypeName)
+            return propertyValueText(static_cast<const PropertyCheckState*>(prop));
+
         if (propTypeName == PropertyQByteArray::TypeName)
             return propertyValueText(static_cast<const PropertyQByteArray*>(prop));
 
@@ -288,12 +263,8 @@ QWidget* PropertyItemDelegate::createEditor(
     if (!property || property->isUserReadOnly())
         return nullptr;
 
-    if (this->editorFactory()) {
-        auto panel = PanelEditor::create(parent);
-        auto editor = this->editorFactory()->createEditor(property, panel);
-        panel->layout()->addWidget(editor);
-        return panel;
-    }
+    if (this->editorFactory())
+        return this->editorFactory()->createEditor(property, parent);
 
     return nullptr;
 }

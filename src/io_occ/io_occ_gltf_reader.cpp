@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (c) 2020, Fougue Ltd. <http://www.fougue.pro>
+** Copyright (c) 2021, Fougue Ltd. <http://www.fougue.pro>
 ** All rights reserved.
 ** See license at https://github.com/fougue/mayo/blob/master/LICENSE.txt
 ****************************************************************************/
@@ -11,12 +11,10 @@ namespace Mayo {
 namespace IO {
 
 class OccGltfReader::Properties : public OccBaseMeshReaderProperties {
-    MAYO_DECLARE_TEXT_ID_FUNCTIONS(Mayo::IO::OccGltfReader_Properties)
+    MAYO_DECLARE_TEXT_ID_FUNCTIONS(Mayo::IO::OccGltfReader::Properties)
 public:
     Properties(PropertyGroup* parentGroup)
-        : OccBaseMeshReaderProperties(parentGroup),
-          skipEmptyNodes(this, textId("skipEmptyNodes")),
-          useMeshNameAsFallback(this, textId("useMeshNameAsFallback"))
+        : OccBaseMeshReaderProperties(parentGroup)
     {
        this->skipEmptyNodes.setDescription(
                     textIdTr("Ignore nodes without geometry(`Yes` by default)"));
@@ -30,8 +28,8 @@ public:
         this->useMeshNameAsFallback.setValue(true);
     }
 
-    PropertyBool skipEmptyNodes;
-    PropertyBool useMeshNameAsFallback;
+    PropertyBool skipEmptyNodes{ this, textId("skipEmptyNodes") };
+    PropertyBool useMeshNameAsFallback{ this, textId("useMeshNameAsFallback") };
 };
 
 OccGltfReader::OccGltfReader()
@@ -49,8 +47,8 @@ void OccGltfReader::applyProperties(const PropertyGroup* params)
     OccBaseMeshReader::applyProperties(params);
     auto ptr = dynamic_cast<const Properties*>(params);
     if (ptr) {
-        m_params.useMeshNameAsFallback = ptr->useMeshNameAsFallback.value();
-        m_params.skipEmptyNodes = ptr->skipEmptyNodes.value();
+        m_params.useMeshNameAsFallback = ptr->useMeshNameAsFallback;
+        m_params.skipEmptyNodes = ptr->skipEmptyNodes;
     }
 }
 

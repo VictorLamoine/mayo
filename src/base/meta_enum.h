@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (c) 2020, Fougue Ltd. <http://www.fougue.pro>
+** Copyright (c) 2021, Fougue Ltd. <http://www.fougue.pro>
 ** All rights reserved.
 ** See license at https://github.com/fougue/mayo/blob/master/LICENSE.txt
 ****************************************************************************/
@@ -22,6 +22,11 @@ public:
     }
 
     template<typename ENUM>
+    static int count() {
+        return magic_enum::enum_count<ENUM>();
+    }
+
+    template<typename ENUM>
     static std::string_view nameWithoutPrefix(ENUM enumValue, std::string_view strPrefix) {
         std::string_view strEnumValueName = MetaEnum::name(enumValue);
         if (strEnumValueName.find(strPrefix) == 0)
@@ -34,6 +39,11 @@ public:
     template<typename ENUM>
     static auto entries() {
         return magic_enum::enum_entries<ENUM>();
+    }
+
+    template<typename ENUM>
+    static auto values() {
+        return magic_enum::enum_values<ENUM>();
     }
 };
 

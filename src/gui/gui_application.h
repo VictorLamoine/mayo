@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (c) 2020, Fougue Ltd. <http://www.fougue.pro>
+** Copyright (c) 2021, Fougue Ltd. <http://www.fougue.pro>
 ** All rights reserved.
 ** See license at https://github.com/fougue/mayo/blob/master/LICENSE.txt
 ****************************************************************************/
@@ -9,7 +9,7 @@
 #include "../base/application_ptr.h"
 #include "../base/application_item_selection_model.h"
 #include "../base/span.h"
-#include "../graphics/graphics_entity_driver_table.h"
+#include "../graphics/graphics_object_driver_table.h"
 #include "../graphics/graphics_tree_node_mapping_driver_table.h"
 #include "gui_document.h"
 
@@ -34,7 +34,7 @@ public:
 
     ApplicationItemSelectionModel* selectionModel() const;
 
-    GraphicsEntityDriverTable* graphicsEntityDriverTable() const;
+    GraphicsObjectDriverTable* graphicsObjectDriverTable() const;
     GraphicsTreeNodeMappingDriverTable* graphicsTreeNodeMappingDriverTable() const;
 
 signals:
@@ -46,6 +46,8 @@ protected:
     void onDocumentAboutToClose(const DocumentPtr& doc);
 
 private:
+    friend class GuiDocument;
+    void connectApplicationItemSelectionChanged(bool on);
     void onApplicationItemSelectionCleared();
     void onApplicationItemSelectionChanged(
             Span<ApplicationItem> selected, Span<ApplicationItem> deselected);
@@ -53,8 +55,9 @@ private:
     ApplicationPtr m_app;
     std::vector<GuiDocument*> m_vecGuiDocument;
     ApplicationItemSelectionModel* m_selectionModel = nullptr;
-    std::unique_ptr<GraphicsEntityDriverTable> m_gfxEntityDriverTable;
+    std::unique_ptr<GraphicsObjectDriverTable> m_gfxObjectDriverTable;
     std::unique_ptr<GraphicsTreeNodeMappingDriverTable> m_gfxTreeNodeMappingDriverTable;
+    QMetaObject::Connection m_connApplicationItemSelectionChanged;
 };
 
 } // namespace Mayo

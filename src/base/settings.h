@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (c) 2020, Fougue Ltd. <http://www.fougue.pro>
+** Copyright (c) 2021, Fougue Ltd. <http://www.fougue.pro>
 ** All rights reserved.
 ** See license at https://github.com/fougue/mayo/blob/master/LICENSE.txt
 ****************************************************************************/
@@ -33,6 +33,7 @@ public:
     void loadFrom(const QSettings& source);
     void loadProperty(SettingIndex index);
     void loadPropertyFrom(const QSettings& source, SettingIndex index);
+    QVariant findValueFromKey(const QString& strKey) const;
 
     void save();
     void saveAs(QSettings* target);

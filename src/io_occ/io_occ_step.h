@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (c) 2020, Fougue Ltd. <http://www.fougue.pro>
+** Copyright (c) 2021, Fougue Ltd. <http://www.fougue.pro>
 ** All rights reserved.
 ** See license at https://github.com/fougue/mayo/blob/master/LICENSE.txt
 ****************************************************************************/
@@ -134,6 +134,10 @@ public:
         FreeVertexMode freeVertexMode = FreeVertexMode::Compound;
         bool writeParametricCurves = true;
         bool writeSubShapesNames = false;
+        QString headerAuthor;
+        QString headerOrganization;
+        QString headerOriginatingSystem;
+        QString headerDescription;
     };
     Parameters& parameters() { return m_params; }
     const Parameters& constParameters() const { return m_params; }

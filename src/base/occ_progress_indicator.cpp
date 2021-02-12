@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (c) 2020, Fougue Ltd. <http://www.fougue.pro>
+** Copyright (c) 2021, Fougue Ltd. <http://www.fougue.pro>
 ** All rights reserved.
 ** See license at https://github.com/fougue/mayo/blob/master/LICENSE.txt
 ****************************************************************************/
@@ -27,7 +27,7 @@ void OccProgressIndicator::Show(const Message_ProgressScope& scope, const bool i
             m_lastStepName = scope.Name();
         }
 
-        const double pc = scope.GetPortion(); // Always within [0,1]
+        const double pc = this->GetPosition(); // Always within [0,1]
         const int val = pc * 100;
         if (m_lastProgress != val || isForce) {
             m_progress->setValue(val);

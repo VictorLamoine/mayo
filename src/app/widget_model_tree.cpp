@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (c) 2020, Fougue Ltd. <http://www.fougue.pro>
+** Copyright (c) 2021, Fougue Ltd. <http://www.fougue.pro>
 ** All rights reserved.
 ** See license at https://github.com/fougue/mayo/blob/master/LICENSE.txt
 ****************************************************************************/
@@ -16,12 +16,15 @@
 #include "theme.h"
 #include "widget_model_tree_builder.h"
 
+#include <QtCore/QtDebug>
 #include <QtCore/QMetaType>
 #include <QtWidgets/QTreeWidget>
 #include <QtWidgets/QTreeWidgetItemIterator>
 
+#include <gsl/gsl_util>
 #include <cassert>
 #include <memory>
+#include <unordered_map>
 
 Q_DECLARE_METATYPE(Mayo::DocumentPtr)
 Q_DECLARE_METATYPE(Mayo::DocumentTreeNode)
@@ -172,6 +175,8 @@ WidgetModelTree::WidgetModelTree(QWidget* widget)
             entityNode.document()->destroyEntity(entityNode.id());
         }
     });
+
+    this->connectTreeModelDataChanged(true);
 }
 
 WidgetModelTree::~WidgetModelTree()
@@ -220,9 +225,20 @@ void WidgetModelTree::registerGuiApplication(GuiApplication* guiApp)
     QObject::connect(
                 app.get(), &Application::documentEntityAboutToBeDestroyed,
                 this, &WidgetModelTree::onDocumentEntityAboutToBeDestroyed);
+
+    QObject::connect(m_guiApp, &GuiApplication::guiDocumentAdded, this, [=](GuiDocument* guiDoc) {
+        QObject::connect(
+                    guiDoc, &GuiDocument::nodesVisibilityChanged,
+                    this, [=](const std::unordered_map<TreeNodeId, Qt::CheckState>& mapNodeId) {
+            this->onNodesVisibilityChanged(guiDoc, mapNodeId);
+        });
+    });
+
     QObject::connect(
-                m_ui->treeWidget_Model->selectionModel(), &QItemSelectionModel::selectionChanged,
-                this, &WidgetModelTree::onTreeWidgetDocumentSelectionChanged);
+                m_guiApp->selectionModel(), &ApplicationItemSelectionModel::changed,
+                this, &WidgetModelTree::onApplicationItemSelectionModelChanged);
+
+    this->connectTreeWidgetDocumentSelectionChanged(true);
 }
 
 WidgetModelTree_UserActions WidgetModelTree::createUserActions(QObject* parent)
@@ -391,6 +407,104 @@ void WidgetModelTree::onTreeWidgetDocumentSelectionChanged(
 
     m_guiApp->selectionModel()->add(vecSelected);
     m_guiApp->selectionModel()->remove(vecDeselected);
+}
+
+void WidgetModelTree::onApplicationItemSelectionModelChanged(
+        Span<ApplicationItem> selected, Span<ApplicationItem> deselected)
+{
+    this->connectTreeWidgetDocumentSelectionChanged(false);
+    auto _ = gsl::finally([=] { this->connectTreeWidgetDocumentSelectionChanged(true); });
+
+    auto fnSetSelected = [=](Span<ApplicationItem> spanAppItem, bool on) {
+        for (const ApplicationItem& appItem : spanAppItem) {
+            if (!appItem.isDocumentTreeNode())
+                continue;
+
+            QTreeWidgetItem* treeItem = this->findTreeItem(appItem.documentTreeNode());
+            if (!treeItem)
+                continue;
+
+            treeItem->setSelected(on);
+            if (on)
+                m_ui->treeWidget_Model->scrollToItem(treeItem);
+        }
+    };
+
+    fnSetSelected(selected, true);
+    fnSetSelected(deselected, false);
+}
+
+void WidgetModelTree::connectTreeModelDataChanged(bool on)
+{
+    if (on) {
+        m_connTreeModelDataChanged = QObject::connect(
+                    m_ui->treeWidget_Model->model(), &QAbstractItemModel::dataChanged,
+                    this, &WidgetModelTree::onTreeModelDataChanged, Qt::UniqueConnection);
+    }
+    else {
+        QObject::disconnect(m_connTreeModelDataChanged);
+    }
+}
+
+void WidgetModelTree::connectTreeWidgetDocumentSelectionChanged(bool on)
+{
+    if (on) {
+        m_connTreeWidgetDocumentSelectionChanged = QObject::connect(
+                    m_ui->treeWidget_Model->selectionModel(), &QItemSelectionModel::selectionChanged,
+                    this, &WidgetModelTree::onTreeWidgetDocumentSelectionChanged,
+                    Qt::UniqueConnection);
+    }
+    else {
+        QObject::disconnect(m_connTreeWidgetDocumentSelectionChanged);
+    }
+}
+
+void WidgetModelTree::onTreeModelDataChanged(
+        const QModelIndex& topLeft, const QModelIndex& bottomRight, const QVector<int>& roles)
+{
+    if (roles.contains(Qt::CheckStateRole) && topLeft == bottomRight) {
+        const QModelIndex& indexItem = topLeft;
+        const auto itemCheckState = Qt::CheckState(indexItem.data(Qt::CheckStateRole).toInt());
+        if (itemCheckState == Qt::PartiallyChecked)
+            return;
+
+        const QVariant var = indexItem.data(Internal::TreeItemDocumentTreeNodeRole);
+        auto treeNode = var.isValid() ? var.value<DocumentTreeNode>() : DocumentTreeNode::null();
+        if (!treeNode.isValid())
+            return;
+
+        GuiDocument* guiDoc = m_guiApp->findGuiDocument(treeNode.document());
+        if (!guiDoc)
+            return;
+
+        guiDoc->setNodeVisible(treeNode.id(), itemCheckState == Qt::Checked ? true : false);
+        guiDoc->graphicsScene()->redraw();
+    }
+}
+
+void WidgetModelTree::onNodesVisibilityChanged(
+        const GuiDocument* guiDoc, const std::unordered_map<TreeNodeId, Qt::CheckState>& mapNodeId)
+{
+    QTreeWidgetItem* treeItemDoc = this->findTreeItem(guiDoc->document());
+    if (!treeItemDoc)
+        return;
+
+    this->connectTreeModelDataChanged(false);
+    auto _ = gsl::finally([=]{ this->connectTreeModelDataChanged(true); });
+
+    auto localMapNodeId = mapNodeId;
+    for (QTreeWidgetItemIterator it(treeItemDoc); *it; ++it) {
+        QTreeWidgetItem* treeItem = *it;
+        const DocumentTreeNode docTreeNode = Internal::treeItemDocumentTreeNode(treeItem);
+        auto itNodeVisibleState = localMapNodeId.find(docTreeNode.id());
+        if (itNodeVisibleState != localMapNodeId.cend()) {
+            treeItem->setCheckState(0, itNodeVisibleState->second);
+            localMapNodeId.erase(itNodeVisibleState);
+        }
+
+        if (localMapNodeId.empty())
+            return;
+    }
 }
 
 } // namespace Mayo

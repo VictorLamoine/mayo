@@ -1,11 +1,12 @@
 /****************************************************************************
-** Copyright (c) 2020, Fougue Ltd. <http://www.fougue.pro>
+** Copyright (c) 2021, Fougue Ltd. <http://www.fougue.pro>
 ** All rights reserved.
 ** See license at https://github.com/fougue/mayo/blob/master/LICENSE.txt
 ****************************************************************************/
 
 #pragma once
 
+#include "io_format.h"
 #include "span.h"
 #include <memory>
 class QString;
@@ -13,7 +14,6 @@ class QString;
 namespace Mayo {
 
 class ApplicationItem;
-class Format;
 class PropertyGroup;
 class TaskProgress;
 

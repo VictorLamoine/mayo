@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (c) 2020, Fougue Ltd. <http://www.fougue.pro>
+** Copyright (c) 2021, Fougue Ltd. <http://www.fougue.pro>
 ** All rights reserved.
 ** See license at https://github.com/fougue/mayo/blob/master/LICENSE.txt
 ****************************************************************************/
@@ -15,7 +15,7 @@
 #include "../base/messenger.h"
 #include "../base/settings.h"
 #include "../base/task_manager.h"
-#include "../graphics/graphics_entity_driver.h"
+#include "../graphics/graphics_object_driver.h"
 #include "../graphics/graphics_utils.h"
 #include "../gui/gui_application.h"
 #include "../gui/gui_document.h"
@@ -52,6 +52,8 @@
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QFileDialog>
 #include <QtDebug>
+
+#include <unordered_set>
 
 namespace Mayo {
 
@@ -255,6 +257,9 @@ MainWindow::MainWindow(GuiApplication* guiApp, QWidget *parent)
     QObject::connect(
                 m_ui->menu_File, &QMenu::aboutToShow,
                 this, &MainWindow::createMenuRecentFiles);
+    QObject::connect(
+                m_ui->menu_Display, &QMenu::aboutToShow,
+                this, &MainWindow::createMenuDisplayMode);
     // "Display" actions
     {
         auto group = new QActionGroup(m_ui->menu_Projection);
@@ -650,11 +655,14 @@ void MainWindow::onApplicationItemSelectionChanged()
             }
 
             GuiDocument* guiDoc = m_guiApp->findGuiDocument(item.document());
-            const TreeNodeId entityNodeId = item.document()->modelTree().nodeRoot(docTreeNode.id());
-            GraphicsEntity gfxEntity = guiDoc->findGraphicsEntity(entityNodeId);
-            if (gfxEntity.driverPtr()) {
-                m_ptrCurrentNodeGraphicsProperties = gfxEntity.driverPtr()->properties(gfxEntity);
-                PropertyGroupSignals* gfxProps = m_ptrCurrentNodeGraphicsProperties.get();
+            std::vector<GraphicsObjectPtr> vecGfxObject;
+            guiDoc->foreachGraphicsObject(docTreeNode.id(), [&](GraphicsObjectPtr gfxObject) {
+                vecGfxObject.push_back(std::move(gfxObject));
+            });
+            auto commonGfxDriver = GraphicsObjectDriver::getCommon(vecGfxObject);
+            if (commonGfxDriver) {
+                m_ptrCurrentNodeGraphicsProperties = commonGfxDriver->properties(vecGfxObject);
+                GraphicsObjectBasePropertyGroup* gfxProps = m_ptrCurrentNodeGraphicsProperties.get();
                 if (gfxProps) {
                     uiProps->editProperties(gfxProps, uiProps->addGroup(tr("Graphics")));
                     QObject::connect(gfxProps, &PropertyGroupSignals::propertyChanged, this, [=]{
@@ -662,13 +670,11 @@ void MainWindow::onApplicationItemSelectionChanged()
                     });
                 }
             }
-
         }
 
         auto app = m_guiApp->application();
         if (AppModule::get(app)->linkWithDocumentSelector.value()) {
-            DocumentPtr doc = item.document();
-            const int index = app->findIndexOfDocument(doc);
+            const int index = app->findIndexOfDocument(item.document());
             if (index != -1)
                 this->setCurrentDocumentIndex(index);
         }
@@ -692,11 +698,18 @@ void MainWindow::onOperationFinished(bool ok, const QString &msg)
 void MainWindow::onGuiDocumentAdded(GuiDocument* guiDoc)
 {
     auto app = m_guiApp->application();
+    auto appModule = AppModule::get(app);
     auto widget = new WidgetGuiDocument(guiDoc);
-    if (AppModule::get(app)->defaultShowOriginTrihedron.value()) {
+    widget->controller()->setInstantZoomFactor(appModule->instantZoomFactor);
+    if (appModule->defaultShowOriginTrihedron.value()) {
         guiDoc->toggleOriginTrihedronVisibility();
         guiDoc->graphicsScene()->redraw();
     }
+
+    QObject::connect(app->settings(), &Settings::changed, this, [=](Property* setting) {
+        if (setting == &appModule->instantZoomFactor)
+            widget->controller()->setInstantZoomFactor(appModule->instantZoomFactor);
+    });
 
     V3dViewController* ctrl = widget->controller();
     QObject::connect(ctrl, &V3dViewController::mouseMoved, [=](const QPoint& pos2d) {
@@ -720,7 +733,7 @@ void MainWindow::onGuiDocumentAdded(GuiDocument* guiDoc)
 
 void MainWindow::onGuiDocumentErased(GuiDocument* guiDoc)
 {
-    AppModule::get(Application::instance())->recordRecentFileThumbnail(guiDoc);
+    AppModule::get(m_guiApp->application())->recordRecentFileThumbnail(guiDoc);
 }
 
 void MainWindow::onWidgetFileSystemLocationActivated(const QFileInfo& loc)
@@ -900,6 +913,7 @@ void MainWindow::updateControlsActivation()
     m_ui->menu_Projection->setEnabled(!appDocumentsEmpty);
     m_ui->actionProjectionOrthographic->setEnabled(!appDocumentsEmpty);
     m_ui->actionProjectionPerspective->setEnabled(!appDocumentsEmpty);
+    m_ui->actionDisplayMode->setEnabled(!appDocumentsEmpty);
     m_ui->actionToggleOriginTrihedron->setEnabled(!appDocumentsEmpty);
     m_ui->actionZoomIn->setEnabled(!appDocumentsEmpty);
     m_ui->actionZoomOut->setEnabled(!appDocumentsEmpty);
@@ -1015,6 +1029,50 @@ QMenu* MainWindow::createMenuRecentFiles()
     }
 
     m_ui->actionRecentFiles->setMenu(menu);
+    return menu;
+}
+
+QMenu* MainWindow::createMenuDisplayMode()
+{
+    QMenu* menu = m_ui->actionDisplayMode->menu();
+    if (!menu) {
+        menu = new QMenu(this);
+        m_ui->actionDisplayMode->setMenu(menu);
+    }
+
+    menu->clear();
+
+    WidgetGuiDocument* widgetGuiDoc = this->currentWidgetGuiDocument();
+    GuiDocument* guiDoc = widgetGuiDoc ? widgetGuiDoc->guiDocument() : nullptr;
+    if (!guiDoc)
+        return menu;
+
+    const auto spanDrivers = m_guiApp->graphicsObjectDriverTable()->drivers();
+    for (const GraphicsObjectDriverPtr& driver : spanDrivers) {
+        if (driver->displayModes().empty())
+            continue; // Skip
+
+        if (driver != spanDrivers.at(0))
+            menu->addSeparator();
+
+        auto group = new QActionGroup(menu);
+        group->setExclusive(true);
+        for (const Enumeration::Item& displayMode : driver->displayModes().items()) {
+            auto action = new QAction(displayMode.name.tr(), menu);
+            action->setCheckable(true);
+            action->setData(displayMode.value);
+            menu->addAction(action);
+            group->addAction(action);
+            if (displayMode.value == guiDoc->activeDisplayMode(driver))
+                action->setChecked(true);
+        }
+
+        QObject::connect(group, &QActionGroup::triggered, [=](QAction* action) {
+            guiDoc->setActiveDisplayMode(driver, action->data().toInt());
+            guiDoc->graphicsScene()->redraw();
+        });
+    }
+
     return menu;
 }
 

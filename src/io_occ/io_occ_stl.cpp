@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (c) 2020, Fougue Ltd. <http://www.fougue.pro>
+** Copyright (c) 2021, Fougue Ltd. <http://www.fougue.pro>
 ** All rights reserved.
 ** See license at https://github.com/fougue/mayo/blob/master/LICENSE.txt
 ****************************************************************************/
@@ -50,24 +50,19 @@ static TopoDS_Shape asShape(const DocumentPtr& doc)
 } // namespace
 
 class OccStlWriter::Properties : public PropertyGroup {
-    MAYO_DECLARE_TEXT_ID_FUNCTIONS(Mayo::IO::OccStlWriter_Properties)
+    MAYO_DECLARE_TEXT_ID_FUNCTIONS(Mayo::IO::OccStlWriter::Properties)
 public:
     Properties(PropertyGroup* parentGroup)
-        : PropertyGroup(parentGroup),
-          targetFormat(this, textId("targetFormat"), &enumFormat)
+        : PropertyGroup(parentGroup)
     {
+        this->targetFormat.mutableEnumeration().changeTrContext(this->textIdContext());
     }
 
     void restoreDefaults() override {
-        this->targetFormat.setValue(int(Format::Binary));
+        this->targetFormat.setValue(Format::Binary);
     }
 
-    static inline const Enumeration enumFormat = {
-        { int(OccStlWriter::Format::Ascii), textId("Ascii"), {} },
-        { int(OccStlWriter::Format::Binary), textId("Binary"), {} }
-    };
-
-    PropertyEnumeration targetFormat;
+    PropertyEnum<OccStlWriter::Format> targetFormat{ this, textId("targetFormat") };
 };
 
 bool OccStlReader::readFile(const QString& filepath, TaskProgress* progress)
@@ -147,7 +142,7 @@ void OccStlWriter::applyProperties(const PropertyGroup* params)
 {
     auto ptr = dynamic_cast<const Properties*>(params);
     if (ptr)
-        m_params.format = ptr->targetFormat.valueAs<OccStlWriter::Format>();
+        m_params.format = ptr->targetFormat;
 }
 
 } // namespace IO
