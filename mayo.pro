@@ -127,6 +127,8 @@ LIBS += -L$$CSF_OCCTLibPath \
     -lTKXmlXCAF \
     -lTKXSBase \
 
+message($$system_path($$join(CASCADE_LIB_DIR, " -L", -L)))
+    
 # -- IGES support
 LIBS += -lTKIGES -lTKXDEIGES
 # -- STEP support

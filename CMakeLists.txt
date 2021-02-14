@@ -39,6 +39,12 @@ qt5_create_translation(
   i18n/mayo_fr.ts
 )
 
+configure_file(
+  src/app/version.h.in
+  version.h
+  @ONLY
+)
+
 # FIXME Taken from Qt example
 add_executable(
   ${PROJECT_NAME}
@@ -287,6 +293,7 @@ add_executable(
 target_include_directories(
   ${PROJECT_NAME}
   PUBLIC
+  ${CMAKE_CURRENT_BINARY_DIR} # version.h
   ${OpenCASCADE_INCLUDE_DIR}
   src/app
   src/3rdparty
