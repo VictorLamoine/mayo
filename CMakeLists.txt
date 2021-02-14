@@ -39,6 +39,10 @@ qt5_create_translation(
   i18n/mayo_fr.ts
 )
 
+# FIXME Variables must be set using git
+set(MAYO_VERSION "abcdef")
+set(MAYO_VERSION_COMMIT "abcdef")
+set(MAYO_VERSION_REVNUM "643")
 configure_file(
   src/app/version.h.in
   version.h
@@ -276,9 +280,9 @@ add_executable(
   src/app/widget_properties_editor.cpp
   src/app/widget_shape_selector.cpp
   src/app/widgets_utils.cpp
-  
+
   mayo.qrc
-    
+
   src/app/dialog_about.ui
   src/app/dialog_inspect_xde.ui
   src/app/dialog_options.ui
@@ -301,6 +305,7 @@ target_include_directories(
 target_link_libraries(
   ${PROJECT_NAME}
   Qt5::Widgets
+  pthread
 )
 
 # FIXME CPack
